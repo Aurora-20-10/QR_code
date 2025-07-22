@@ -21,59 +21,70 @@
       padding: 20px;
       border-radius: 8px;
     }
+    .qr-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 20px;
+    }
     .qr-item {
       background-color: #222;
       border: 1px solid #333;
-      margin: 10px 0;
       padding: 10px;
-      border-radius: 6px;
+      border-radius: 8px;
+      text-align: center;
     }
     .qr-img {
-      margin-top: 10px;
+      width: 100%;
       cursor: pointer;
     }
-    input, select, button {
-      padding: 8px;
-      margin: 4px;
+    .qr-info {
+      font-size: 12px;
+      margin-top: 8px;
+    }
+    .popup {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.8);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .popup-content {
+      background: #222;
+      padding: 20px;
+      border-radius: 10px;
+      max-width: 90vw;
+      max-height: 90vh;
+      text-align: center;
+    }
+    .popup-content img {
+      max-width: 100%;
+    }
+    .popup-content .close {
+      color: #f55;
+      font-size: 18px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    input, select, button, textarea {
       background-color: #333;
       color: #fff;
       border: 1px solid #666;
       border-radius: 4px;
+      padding: 8px;
+      margin: 4px;
     }
     button:hover {
       background-color: #444;
-    }
-    textarea {
-      background-color: #333;
-      color: #fff;
-      border: 1px solid #666;
-      border-radius: 4px;
-      padding: 6px;
-      width: 100%;
-      margin-top: 6px;
-    }
-    #modal {
-      display: none;
-      position: fixed;
-      z-index: 1000;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0, 0, 0, 0.8);
-      justify-content: center;
-      align-items: center;
-    }
-    #modal canvas {
-      border: 8px solid white;
-      border-radius: 10px;
-      background-color: white;
     }
   </style>
 </head>
 <body>
   <h1>Trạm QR của Aurora</h1>
-
   <div>
     <input id="content" placeholder="Nội dung mã QR">
     <input id="note" placeholder="Ghi chú">
@@ -82,21 +93,25 @@
     <button onclick="exportData()">Xuất toàn bộ</button>
     <input type="file" onchange="importData(event)">
   </div>
-
   <div>
     <label>Lọc theo phân loại:</label>
     <select id="filter-tag" onchange="renderQRs()">
       <option value="">-- Tất cả --</option>
     </select>
-
     <label>Lọc theo tháng:</label>
     <select id="filter-month" onchange="renderQRs()">
       <option value="">-- Tất cả --</option>
     </select>
   </div>
-
   <div id="qr-groups"></div>
-  <div id="modal" onclick="this.style.display='none'"></div>
+
+  <div class="popup" id="popup">
+    <div class="popup-content">
+      <canvas id="popupCanvas"></canvas>
+      <div class="qr-info" id="popupInfo"></div>
+      <div class="close" onclick="closePopup()">Đóng</div>
+    </div>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
   <script>
@@ -112,17 +127,9 @@
       const note = document.getElementById('note').value.trim();
       const tag = document.getElementById('tag').value.trim() || 'Chưa phân loại';
       if (!content) return alert('Nội dung không được để trống');
-
-      const existed = qrData.find(q => q.content === content);
-      if (existed) {
-        const t = new Date(existed.time).toLocaleString();
-        alert(`⚠️ Mã QR này đã tồn tại từ ${t}`);
-        return;
-      }
-
+      if (qrData.some(q => q.content === content)) return alert('Nội dung này đã tồn tại');
       qrData.push({ content, note, tag, time: new Date().toISOString() });
       saveData();
-
       document.getElementById('content').value = '';
       document.getElementById('note').value = '';
       document.getElementById('tag').value = '';
@@ -131,7 +138,6 @@
     function renderQRs() {
       const filterTag = document.getElementById('filter-tag').value;
       const filterMonth = document.getElementById('filter-month').value;
-
       const filteredData = qrData.filter(qr => {
         const matchTag = !filterTag || qr.tag === filterTag;
         const matchMonth = !filterMonth || qr.time.slice(0, 7) === filterMonth;
@@ -146,6 +152,7 @@
 
       const qrGroups = document.getElementById('qr-groups');
       qrGroups.innerHTML = '';
+
       for (let tag in grouped) {
         const groupDiv = document.createElement('div');
         groupDiv.className = 'group';
@@ -153,12 +160,17 @@
         title.textContent = `📂 ${tag}`;
         groupDiv.appendChild(title);
 
+        const grid = document.createElement('div');
+        grid.className = 'qr-grid';
+
         grouped[tag].forEach((qr, idx) => {
           const item = document.createElement('div');
           item.className = 'qr-item';
 
-          const info = document.createElement('div');
-          info.innerHTML = `<b>Ngày:</b> ${new Date(qr.time).toLocaleString()}`;
+          const canvas = document.createElement('canvas');
+          canvas.className = 'qr-img';
+          QRCode.toCanvas(canvas, qr.content, { width: 120 });
+          canvas.onclick = () => showPopup(qr);
 
           const noteInput = document.createElement('textarea');
           noteInput.value = qr.note || '';
@@ -170,31 +182,23 @@
           const tagInput = document.createElement('input');
           tagInput.value = qr.tag || '';
           tagInput.onchange = () => {
-            qr.tag = tagInput.value.trim() || 'Chưa phân loại';
+            qr.tag = tagInput.value || 'Chưa phân loại';
             saveData();
           };
 
-          const canvas = document.createElement('canvas');
-          canvas.className = 'qr-img';
-          QRCode.toCanvas(canvas, qr.content, { width: 120 });
-          canvas.onclick = () => {
-            const modal = document.getElementById('modal');
-            modal.innerHTML = '';
-            const bigCanvas = document.createElement('canvas');
-            QRCode.toCanvas(bigCanvas, qr.content, { width: 300 });
-            modal.appendChild(bigCanvas);
-            modal.style.display = 'flex';
-          };
+          const info = document.createElement('div');
+          info.className = 'qr-info';
+          info.innerHTML = `<b>Ngày:</b> ${new Date(qr.time).toLocaleDateString()}`;
 
           const delBtn = document.createElement('button');
-          delBtn.textContent = '❌ Xoá';
+          delBtn.textContent = '❌';
           delBtn.onclick = () => {
             qrData = qrData.filter(q => !(q.content === qr.content && q.time === qr.time));
             saveData();
           };
 
           const downloadBtn = document.createElement('button');
-          downloadBtn.textContent = '⬇️ Tải';
+          downloadBtn.textContent = '⬇️';
           downloadBtn.onclick = () => {
             const link = document.createElement('a');
             link.download = `QR.png`;
@@ -202,19 +206,32 @@
             link.click();
           };
 
+          item.appendChild(canvas);
           item.appendChild(info);
           item.appendChild(noteInput);
           item.appendChild(tagInput);
-          item.appendChild(canvas);
           item.appendChild(downloadBtn);
           item.appendChild(delBtn);
-          groupDiv.appendChild(item);
+
+          grid.appendChild(item);
         });
 
+        groupDiv.appendChild(grid);
         qrGroups.appendChild(groupDiv);
       }
-
       updateFilters();
+    }
+
+    function showPopup(qr) {
+      const popup = document.getElementById('popup');
+      const canvas = document.getElementById('popupCanvas');
+      QRCode.toCanvas(canvas, qr.content, { width: 300 });
+      document.getElementById('popupInfo').innerHTML = `Nội dung: ${qr.content}<br>Ghi chú: ${qr.note}<br>Phân loại: ${qr.tag}<br>Ngày: ${new Date(qr.time).toLocaleString()}`;
+      popup.style.display = 'flex';
+    }
+
+    function closePopup() {
+      document.getElementById('popup').style.display = 'none';
     }
 
     function updateFilters() {
@@ -228,7 +245,6 @@
 
       const tagSelect = document.getElementById('filter-tag');
       const monthSelect = document.getElementById('filter-month');
-
       const currentTag = tagSelect.value;
       const currentMonth = monthSelect.value;
 
