@@ -75,6 +75,9 @@
     <select id="filter-month" onchange="renderQRs()">
       <option value="">-- Tất cả --</option>
     </select>
+
+    <label>Tìm kiếm:</label>
+    <input id="search" placeholder="Từ khóa" oninput="renderQRs()">
   </div>
 
   <div id="qr-groups"></div>
@@ -105,12 +108,16 @@
     function renderQRs() {
       const filterTag = document.getElementById('filter-tag').value;
       const filterMonth = document.getElementById('filter-month').value;
+      const keyword = document.getElementById('search').value.trim().toLowerCase();
 
       const filteredData = qrData.filter(qr => {
         const matchTag = !filterTag || qr.tag === filterTag;
         const matchMonth = !filterMonth || qr.time.slice(0, 7) === filterMonth;
-        return matchTag && matchMonth;
+        const matchKeyword = !keyword || qr.content.toLowerCase().includes(keyword) || (qr.note || '').toLowerCase().includes(keyword);
+        return matchTag && matchMonth && matchKeyword;
       });
+
+      filteredData.sort((a, b) => new Date(b.time) - new Date(a.time));
 
       const grouped = {};
       filteredData.forEach(qr => {
@@ -127,7 +134,7 @@
         title.textContent = `📂 ${tag}`;
         groupDiv.appendChild(title);
 
-        grouped[tag].forEach((qr, idx) => {
+        grouped[tag].forEach((qr) => {
           const item = document.createElement('div');
           item.className = 'qr-item';
 
@@ -136,7 +143,6 @@
 
           const noteInput = document.createElement('textarea');
           noteInput.value = qr.note || '';
-          noteInput.placeholder = "Ghi chú";
           noteInput.onchange = () => {
             qr.note = noteInput.value;
             saveData();
@@ -144,7 +150,6 @@
 
           const tagInput = document.createElement('input');
           tagInput.value = qr.tag;
-          tagInput.placeholder = "Phân loại";
           tagInput.onchange = () => {
             qr.tag = tagInput.value || 'Chưa phân loại';
             saveData();
@@ -157,8 +162,10 @@
           const delBtn = document.createElement('button');
           delBtn.textContent = '❌ Xoá';
           delBtn.onclick = () => {
-            qrData = qrData.filter(q => !(q.content === qr.content && q.time === qr.time));
-            saveData();
+            if (confirm('Bạn có chắc chắn muốn xoá?')) {
+              qrData = qrData.filter(q => !(q.content === qr.content && q.time === qr.time));
+              saveData();
+            }
           };
 
           const downloadBtn = document.createElement('button');
