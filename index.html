@@ -51,6 +51,15 @@
     <button onclick="addQR()">Tạo mã</button>
     <button onclick="exportData()">Xuất toàn bộ</button>
     <input type="file" onchange="importData(event)">
+  </div>  <div>
+    <label>Lọc theo phân loại:</label>
+    <select id="filter-tag" onchange="renderQRs()">
+      <option value="">-- Tất cả --</option>
+    </select><label>Lọc theo tháng:</label>
+<select id="filter-month" onchange="renderQRs()">
+  <option value="">-- Tất cả --</option>
+</select>
+
   </div>  <div id="qr-groups"></div>  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>  <script>
     let qrData = JSON.parse(localStorage.getItem('aurora_qr_list') || '[]');
 
@@ -74,8 +83,17 @@
     }
 
     function renderQRs() {
+      const filterTag = document.getElementById('filter-tag').value;
+      const filterMonth = document.getElementById('filter-month').value;
+
+      const filteredData = qrData.filter(qr => {
+        const matchTag = !filterTag || qr.tag === filterTag;
+        const matchMonth = !filterMonth || qr.time.slice(0, 7) === filterMonth;
+        return matchTag && matchMonth;
+      });
+
       const grouped = {};
-      qrData.forEach(qr => {
+      filteredData.forEach(qr => {
         if (!grouped[qr.tag]) grouped[qr.tag] = [];
         grouped[qr.tag].push(qr);
       });
@@ -120,6 +138,42 @@
 
         qrGroups.appendChild(groupDiv);
       }
+
+      updateFilters();
+    }
+
+    function updateFilters() {
+      const tagSet = new Set();
+      const monthSet = new Set();
+
+      qrData.forEach(qr => {
+        tagSet.add(qr.tag);
+        monthSet.add(qr.time.slice(0, 7));
+      });
+
+      const tagSelect = document.getElementById('filter-tag');
+      const monthSelect = document.getElementById('filter-month');
+
+      const currentTag = tagSelect.value;
+      const currentMonth = monthSelect.value;
+
+      tagSelect.innerHTML = '<option value="">-- Tất cả --</option>';
+      Array.from(tagSet).sort().forEach(tag => {
+        const option = document.createElement('option');
+        option.value = tag;
+        option.textContent = tag;
+        if (tag === currentTag) option.selected = true;
+        tagSelect.appendChild(option);
+      });
+
+      monthSelect.innerHTML = '<option value="">-- Tất cả --</option>';
+      Array.from(monthSet).sort().forEach(month => {
+        const option = document.createElement('option');
+        option.value = month;
+        option.textContent = month;
+        if (month === currentMonth) option.selected = true;
+        monthSelect.appendChild(option);
+      });
     }
 
     function exportData() {
