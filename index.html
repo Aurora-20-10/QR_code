@@ -14,7 +14,7 @@
       color: #80d0ff;
       text-shadow: 0 0 5px #00f0ff;
     }
-    input, button, select {
+    input, button, select, textarea {
       padding: 10px;
       margin: 5px;
       border-radius: 5px;
@@ -35,11 +35,16 @@
       display: block;
       margin: 10px 0;
     }
+    .stats {
+      margin-top: 20px;
+      font-style: italic;
+      color: #a0a0a0;
+    }
   </style>
 </head>
 <body>
-  <h1>🧬 Aurora QR Station – Tầng 2</h1>
-  <input id="qr-input" placeholder="Nội dung QR" style="width: 250px">
+  <h1>🧬 Aurora QR Station – Tầng 5 – Lớp 2: Chiến lược sống</h1>
+  <input id="qr-input" placeholder="Nội dung QR" style="width: 300px">
   <input id="qr-note" placeholder="Ghi chú (tuỳ chọn)" style="width: 200px">
   <select id="qr-tag">
     <option value="Chưa phân loại">Chưa phân loại</option>
@@ -47,8 +52,19 @@
     <option value="Công việc">Công việc</option>
     <option value="Hệ thống">Hệ thống</option>
   </select>
+  <select id="qr-mood">
+    <option value="Trống">Tâm trạng?</option>
+    <option value="Tỉnh táo">Tỉnh táo</option>
+    <option value="Mệt mỏi">Mệt mỏi</option>
+    <option value="Động lực">Động lực</option>
+    <option value="Phòng thủ">Phòng thủ</option>
+    <option value="Giao chiến">Giao chiến</option>
+  </select>
   <button onclick="createQR()">Tạo & Lưu</button>
-  <button onclick="exportData()">📤 Xuất dữ liệu</button>  <div id="qr-list"></div>  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>  <script>
+  <button onclick="exportData()">📤 Xuất dữ liệu</button>
+  <input type="file" onchange="importData(event)">
+  <div class="stats" id="stats"></div>
+  <div id="qr-list"></div>  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>  <script>
     let storedQRs = JSON.parse(localStorage.getItem('aurora_qr_list')) || [];
 
     function saveToStorage() {
@@ -59,9 +75,10 @@
       const text = document.getElementById("qr-input").value.trim();
       const note = document.getElementById("qr-note").value.trim();
       const tag = document.getElementById("qr-tag").value;
+      const mood = document.getElementById("qr-mood").value;
       if (!text) return;
 
-      storedQRs.unshift({ text, note, tag, created: new Date().toISOString() });
+      storedQRs.unshift({ text, note, tag, mood, created: new Date().toISOString() });
       saveToStorage();
       renderQRs();
 
@@ -86,16 +103,41 @@
       a.click();
     }
 
+    function importData(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = JSON.parse(e.target.result);
+          if (!Array.isArray(data)) throw new Error();
+          const unique = data.filter(d => !storedQRs.some(q => q.text === d.text));
+          storedQRs = [...unique, ...storedQRs];
+          saveToStorage();
+          renderQRs();
+          alert("Đã nhập " + unique.length + " mã QR mới.");
+        } catch {
+          alert("File không hợp lệ hoặc sai định dạng.");
+        }
+      };
+      reader.readAsText(file);
+    }
+
     function renderQRs() {
       const list = document.getElementById("qr-list");
+      const stats = document.getElementById("stats");
       list.innerHTML = "";
+      stats.innerText = `Tổng mã QR: ${storedQRs.length}`;
 
       storedQRs.forEach((qr, index) => {
         const div = document.createElement("div");
         div.className = "qr-item";
 
         const p = document.createElement("p");
-        p.innerHTML = `🔗 <strong>${qr.text}</strong><br>📝 ${qr.note || 'Không ghi chú'}<br>🏷️ ${qr.tag} – 📅 ${new Date(qr.created).toLocaleString()}`;
+        p.innerHTML = `🔗 <strong>${qr.text}</strong><br>
+                       📝 ${qr.note || 'Không ghi chú'}<br>
+                       🏷️ ${qr.tag} – 🧠 ${qr.mood || 'Không ghi'}<br>
+                       📅 ${new Date(qr.created).toLocaleString()}`;
 
         const canvas = document.createElement("canvas");
         QRCode.toCanvas(canvas, qr.text, { width: 200 });
