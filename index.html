@@ -52,25 +52,32 @@
       width: 100%;
       margin-top: 6px;
     }
-    #qr-modal {
+    .modal {
       display: none;
       position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background-color: rgba(0, 0, 0, 0.8);
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background-color: rgba(0,0,0,0.8);
       justify-content: center;
       align-items: center;
       z-index: 999;
     }
-    #qr-modal canvas {
-      border: 4px solid #00f5d4;
-      border-radius: 10px;
+    .modal-content {
+      background: #000;
+      padding: 20px;
+      border-radius: 8px;
+      position: relative;
     }
-    #qr-modal .close {
+    .modal-content canvas {
+      width: 300px;
+      height: 300px;
+    }
+    .close-btn {
       position: absolute;
-      top: 20px;
-      right: 30px;
-      font-size: 30px;
-      color: white;
+      top: 8px;
+      right: 12px;
+      color: #fff;
+      font-size: 20px;
       cursor: pointer;
     }
   </style>
@@ -101,9 +108,11 @@
 
   <div id="qr-groups"></div>
 
-  <div id="qr-modal" onclick="hideModal()">
-    <div class="close" onclick="hideModal(event)">×</div>
-    <canvas id="qr-large"></canvas>
+  <div id="qr-modal" class="modal" onclick="this.style.display='none'">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <span class="close-btn" onclick="document.getElementById('qr-modal').style.display='none'">×</span>
+      <canvas id="qr-modal-canvas"></canvas>
+    </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
@@ -168,12 +177,21 @@
             saveData();
           };
 
+          const tagInput = document.createElement('input');
+          tagInput.value = qr.tag;
+          tagInput.onchange = () => {
+            qr.tag = tagInput.value.trim() || 'Chưa phân loại';
+            saveData();
+          };
+
           const canvas = document.createElement('canvas');
           canvas.className = 'qr-img';
           QRCode.toCanvas(canvas, qr.content, { width: 120 });
-          canvas.onclick = (e) => {
-            e.stopPropagation();
-            showModal(qr.content);
+          canvas.onclick = () => {
+            const modal = document.getElementById('qr-modal');
+            const modalCanvas = document.getElementById('qr-modal-canvas');
+            QRCode.toCanvas(modalCanvas, qr.content, { width: 300 });
+            modal.style.display = 'flex';
           };
 
           const delBtn = document.createElement('button');
@@ -194,6 +212,7 @@
 
           item.appendChild(info);
           item.appendChild(noteInput);
+          item.appendChild(tagInput);
           item.appendChild(canvas);
           item.appendChild(downloadBtn);
           item.appendChild(delBtn);
@@ -264,18 +283,6 @@
         }
       };
       reader.readAsText(file);
-    }
-
-    function showModal(content) {
-      const modal = document.getElementById('qr-modal');
-      const canvas = document.getElementById('qr-large');
-      QRCode.toCanvas(canvas, content, { width: 300 });
-      modal.style.display = 'flex';
-    }
-
-    function hideModal(e) {
-      if (e) e.stopPropagation();
-      document.getElementById('qr-modal').style.display = 'none';
     }
 
     renderQRs();
