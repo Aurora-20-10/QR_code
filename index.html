@@ -13,18 +13,24 @@
     input, button {
       padding: 10px;
       font-size: 16px;
-      margin-right: 10px;
+      margin: 5px;
     }
     .qr-item {
       margin-top: 20px;
-      border-bottom: 1px solid #444;
-      padding-bottom: 20px;
+      padding: 15px;
+      background: #1e1e1e;
+      border-radius: 8px;
+      border: 1px solid #333;
+    }
+    canvas {
+      display: block;
+      margin-top: 10px;
     }
   </style>
 </head>
 <body>
-  <h1>🧬 Trạm tạo và lưu QR – Aurora.T-05</h1>
-  <input id="qr-input" placeholder="Nhập nội dung để tạo QR" style="width: 300px;">
+  <h1>🧬 Aurora.T-05 – Trạm QR vĩnh viễn</h1>
+  <input id="qr-input" placeholder="Nhập nội dung để tạo QR" style="width: 350px;">
   <button onclick="createQR()">Tạo & Lưu</button>
 
   <div id="qr-list"></div>
@@ -41,11 +47,19 @@
       const value = document.getElementById("qr-input").value.trim();
       if (!value) return;
 
-      storedQRs.unshift(value);
-      storedQRs = [...new Set(storedQRs)].slice(0, 20); // giữ tối đa 20 cái
+      storedQRs.unshift(value); // đẩy lên đầu
+      storedQRs = [...new Set(storedQRs)]; // lọc trùng
       saveToStorage();
       renderQRs();
       document.getElementById("qr-input").value = "";
+    }
+
+    function deleteQR(index) {
+      if (confirm("Xóa mã QR này?")) {
+        storedQRs.splice(index, 1);
+        saveToStorage();
+        renderQRs();
+      }
     }
 
     function renderQRs() {
@@ -56,29 +70,33 @@
         const div = document.createElement("div");
         div.className = "qr-item";
 
+        const p = document.createElement("p");
+        p.innerText = `🔗 ${text}`;
+
         const canvas = document.createElement("canvas");
         QRCode.toCanvas(canvas, text, { width: 200 });
 
-        const p = document.createElement("p");
-        p.innerText = `🔗 Nội dung: ${text}`;
-
-        const btn = document.createElement("button");
-        btn.innerText = "Tải ảnh QR";
-        btn.onclick = () => {
+        const downloadBtn = document.createElement("button");
+        downloadBtn.innerText = "📥 Tải ảnh QR";
+        downloadBtn.onclick = () => {
           const link = document.createElement("a");
           link.download = `qr_${index}.png`;
           link.href = canvas.toDataURL("image/png");
           link.click();
         };
 
+        const deleteBtn = document.createElement("button");
+        deleteBtn.innerText = "🗑 Xóa";
+        deleteBtn.onclick = () => deleteQR(index);
+
         div.appendChild(p);
         div.appendChild(canvas);
-        div.appendChild(btn);
+        div.appendChild(downloadBtn);
+        div.appendChild(deleteBtn);
         list.appendChild(div);
       });
     }
 
-    // Load khi vào trang
     renderQRs();
   </script>
 </body>
