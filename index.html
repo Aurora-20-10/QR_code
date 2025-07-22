@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <title>Trạm QR của Aurora – Tầng 2</title>
+  <title>Trạm QR của Aurora</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -16,12 +16,11 @@
       color: #00f5d4;
     }
     .group {
-      margin-bottom: 20px;
+      margin-bottom: 40px;
       border: 1px solid #444;
       padding: 20px;
       border-radius: 8px;
     }
-    .group.collapsed .qr-item { display: none; }
     .qr-item {
       background-color: #222;
       border: 1px solid #333;
@@ -31,6 +30,7 @@
     }
     .qr-img {
       margin-top: 10px;
+      cursor: pointer;
     }
     input, select, button {
       padding: 8px;
@@ -52,23 +52,31 @@
       width: 100%;
       margin-top: 6px;
     }
-    .toggle-group {
-      cursor: pointer;
-      color: #0ff;
-      font-weight: bold;
-      margin-bottom: 6px;
+    #qr-modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: rgba(0, 0, 0, 0.8);
+      justify-content: center;
+      align-items: center;
+      z-index: 999;
     }
-    .summary {
-      margin-top: 20px;
-      padding: 10px;
-      background-color: #1a1a1a;
-      border-radius: 6px;
-      border: 1px solid #444;
+    #qr-modal canvas {
+      border: 4px solid #00f5d4;
+      border-radius: 10px;
+    }
+    #qr-modal .close {
+      position: absolute;
+      top: 20px;
+      right: 30px;
+      font-size: 30px;
+      color: white;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <h1>Trạm QR của Aurora – Tầng 2</h1>
+  <h1>Trạm QR của Aurora</h1>
 
   <div>
     <input id="content" placeholder="Nội dung mã QR">
@@ -91,8 +99,12 @@
     </select>
   </div>
 
-  <div class="summary" id="stats"></div>
   <div id="qr-groups"></div>
+
+  <div id="qr-modal" onclick="hideModal()">
+    <div class="close" onclick="hideModal(event)">×</div>
+    <canvas id="qr-large"></canvas>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
   <script>
@@ -135,18 +147,14 @@
 
       const qrGroups = document.getElementById('qr-groups');
       qrGroups.innerHTML = '';
-
       for (let tag in grouped) {
         const groupDiv = document.createElement('div');
         groupDiv.className = 'group';
+        const title = document.createElement('h2');
+        title.textContent = `📂 ${tag}`;
+        groupDiv.appendChild(title);
 
-        const toggle = document.createElement('div');
-        toggle.className = 'toggle-group';
-        toggle.textContent = `📂 ${tag} (${grouped[tag].length})`;
-        toggle.onclick = () => groupDiv.classList.toggle('collapsed');
-        groupDiv.appendChild(toggle);
-
-        grouped[tag].forEach(qr => {
+        grouped[tag].forEach((qr, idx) => {
           const item = document.createElement('div');
           item.className = 'qr-item';
 
@@ -163,6 +171,10 @@
           const canvas = document.createElement('canvas');
           canvas.className = 'qr-img';
           QRCode.toCanvas(canvas, qr.content, { width: 120 });
+          canvas.onclick = (e) => {
+            e.stopPropagation();
+            showModal(qr.content);
+          };
 
           const delBtn = document.createElement('button');
           delBtn.textContent = '❌ Xoá';
@@ -192,7 +204,6 @@
       }
 
       updateFilters();
-      updateStats();
     }
 
     function updateFilters() {
@@ -229,15 +240,6 @@
       });
     }
 
-    function updateStats() {
-      const stats = document.getElementById('stats');
-      const total = qrData.length;
-      const byTag = {};
-      qrData.forEach(q => byTag[q.tag] = (byTag[q.tag] || 0) + 1);
-      stats.innerHTML = `<b>Tổng QR:</b> ${total} | ` +
-        Object.entries(byTag).map(([k,v]) => `${k}: ${v}`).join(' | ');
-    }
-
     function exportData() {
       const blob = new Blob([JSON.stringify(qrData)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -264,8 +266,16 @@
       reader.readAsText(file);
     }
 
-    window.onbeforeunload = () => {
-      if (qrData.length) return 'Bạn có chắc chắn muốn rời đi?';
+    function showModal(content) {
+      const modal = document.getElementById('qr-modal');
+      const canvas = document.getElementById('qr-large');
+      QRCode.toCanvas(canvas, content, { width: 300 });
+      modal.style.display = 'flex';
+    }
+
+    function hideModal(e) {
+      if (e) e.stopPropagation();
+      document.getElementById('qr-modal').style.display = 'none';
     }
 
     renderQRs();
