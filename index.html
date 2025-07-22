@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="vi">
+<!DOCTYPE html>
+<html lang="vi">
 <head>
   <meta charset="UTF-8">
   <title>Trạm QR của Aurora</title>
@@ -41,26 +42,45 @@
     button:hover {
       background-color: #444;
     }
+    textarea {
+      background-color: #333;
+      color: #fff;
+      border: 1px solid #666;
+      border-radius: 4px;
+      padding: 6px;
+      width: 100%;
+      margin-top: 6px;
+    }
   </style>
 </head>
 <body>
-  <h1>Trạm QR của Aurora</h1>  <div>
+  <h1>Trạm QR của Aurora</h1>
+
+  <div>
     <input id="content" placeholder="Nội dung mã QR">
     <input id="note" placeholder="Ghi chú">
     <input id="tag" placeholder="Phân loại (Công việc, Cá nhân, ...)">
     <button onclick="addQR()">Tạo mã</button>
     <button onclick="exportData()">Xuất toàn bộ</button>
     <input type="file" onchange="importData(event)">
-  </div>  <div>
+  </div>
+
+  <div>
     <label>Lọc theo phân loại:</label>
     <select id="filter-tag" onchange="renderQRs()">
       <option value="">-- Tất cả --</option>
-    </select><label>Lọc theo tháng:</label>
-<select id="filter-month" onchange="renderQRs()">
-  <option value="">-- Tất cả --</option>
-</select>
+    </select>
 
-  </div>  <div id="qr-groups"></div>  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>  <script>
+    <label>Lọc theo tháng:</label>
+    <select id="filter-month" onchange="renderQRs()">
+      <option value="">-- Tất cả --</option>
+    </select>
+  </div>
+
+  <div id="qr-groups"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+  <script>
     let qrData = JSON.parse(localStorage.getItem('aurora_qr_list') || '[]');
 
     function saveData() {
@@ -110,17 +130,37 @@
         grouped[tag].forEach((qr, idx) => {
           const item = document.createElement('div');
           item.className = 'qr-item';
+
           const info = document.createElement('div');
-          info.innerHTML = `<b>Ghi chú:</b> ${qr.note || '---'}<br><b>Ngày:</b> ${new Date(qr.time).toLocaleString()}`;
+          info.innerHTML = `<b>Ngày:</b> ${new Date(qr.time).toLocaleString()}`;
+
+          const noteInput = document.createElement('textarea');
+          noteInput.value = qr.note || '';
+          noteInput.placeholder = "Ghi chú";
+          noteInput.onchange = () => {
+            qr.note = noteInput.value;
+            saveData();
+          };
+
+          const tagInput = document.createElement('input');
+          tagInput.value = qr.tag;
+          tagInput.placeholder = "Phân loại";
+          tagInput.onchange = () => {
+            qr.tag = tagInput.value || 'Chưa phân loại';
+            saveData();
+          };
+
           const canvas = document.createElement('canvas');
           canvas.className = 'qr-img';
           QRCode.toCanvas(canvas, qr.content, { width: 120 });
+
           const delBtn = document.createElement('button');
           delBtn.textContent = '❌ Xoá';
           delBtn.onclick = () => {
             qrData = qrData.filter(q => !(q.content === qr.content && q.time === qr.time));
             saveData();
           };
+
           const downloadBtn = document.createElement('button');
           downloadBtn.textContent = '⬇️ Tải';
           downloadBtn.onclick = () => {
@@ -129,7 +169,10 @@
             link.href = canvas.toDataURL();
             link.click();
           };
+
           item.appendChild(info);
+          item.appendChild(noteInput);
+          item.appendChild(tagInput);
           item.appendChild(canvas);
           item.appendChild(downloadBtn);
           item.appendChild(delBtn);
@@ -203,5 +246,6 @@
     }
 
     renderQRs();
-  </script></body>
+  </script>
+</body>
 </html>
