@@ -1,25 +1,85 @@
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <title>Aurora QR Generator</title>
+  <title>Trạm QR của Aurora</title>
+  <style>
+    body {
+      font-family: Arial;
+      padding: 20px;
+      background: #121212;
+      color: #f0f0f0;
+    }
+    input, button {
+      padding: 10px;
+      font-size: 16px;
+      margin-right: 10px;
+    }
+    .qr-item {
+      margin-top: 20px;
+      border-bottom: 1px solid #444;
+      padding-bottom: 20px;
+    }
+  </style>
 </head>
 <body>
-  <h2>Tạo mã QR tĩnh</h2>
-  <input id="text" type="text" placeholder="Nhập nội dung" style="width:300px">
-  <button onclick="generateQR()">Tạo QR</button>
-  <br><br>
-  <canvas id="qrcode"></canvas>
+  <h1>🧬 Trạm tạo và lưu QR – Aurora.T-05</h1>
+  <input id="qr-input" placeholder="Nhập nội dung để tạo QR" style="width: 300px;">
+  <button onclick="createQR()">Tạo & Lưu</button>
+
+  <div id="qr-list"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
   <script>
-    function generateQR() {
-      const canvas = document.getElementById("qrcode");
-      const value = document.getElementById("text").value;
-      QRCode.toCanvas(canvas, value, { width: 256 }, function (error) {
-        if (error) console.error(error);
+    let storedQRs = JSON.parse(localStorage.getItem('aurora_qr_list')) || [];
+
+    function saveToStorage() {
+      localStorage.setItem('aurora_qr_list', JSON.stringify(storedQRs));
+    }
+
+    function createQR() {
+      const value = document.getElementById("qr-input").value.trim();
+      if (!value) return;
+
+      storedQRs.unshift(value);
+      storedQRs = [...new Set(storedQRs)].slice(0, 20); // giữ tối đa 20 cái
+      saveToStorage();
+      renderQRs();
+      document.getElementById("qr-input").value = "";
+    }
+
+    function renderQRs() {
+      const list = document.getElementById("qr-list");
+      list.innerHTML = "";
+
+      storedQRs.forEach((text, index) => {
+        const div = document.createElement("div");
+        div.className = "qr-item";
+
+        const canvas = document.createElement("canvas");
+        QRCode.toCanvas(canvas, text, { width: 200 });
+
+        const p = document.createElement("p");
+        p.innerText = `🔗 Nội dung: ${text}`;
+
+        const btn = document.createElement("button");
+        btn.innerText = "Tải ảnh QR";
+        btn.onclick = () => {
+          const link = document.createElement("a");
+          link.download = `qr_${index}.png`;
+          link.href = canvas.toDataURL("image/png");
+          link.click();
+        };
+
+        div.appendChild(p);
+        div.appendChild(canvas);
+        div.appendChild(btn);
+        list.appendChild(div);
       });
     }
+
+    // Load khi vào trang
+    renderQRs();
   </script>
 </body>
 </html>
