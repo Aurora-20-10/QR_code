@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <title>Trạm QR của Aurora</title>
+  <title>Trạm QR của Aurora – Tầng 2</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -16,11 +16,12 @@
       color: #00f5d4;
     }
     .group {
-      margin-bottom: 40px;
+      margin-bottom: 20px;
       border: 1px solid #444;
       padding: 20px;
       border-radius: 8px;
     }
+    .group.collapsed .qr-item { display: none; }
     .qr-item {
       background-color: #222;
       border: 1px solid #333;
@@ -51,10 +52,23 @@
       width: 100%;
       margin-top: 6px;
     }
+    .toggle-group {
+      cursor: pointer;
+      color: #0ff;
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+    .summary {
+      margin-top: 20px;
+      padding: 10px;
+      background-color: #1a1a1a;
+      border-radius: 6px;
+      border: 1px solid #444;
+    }
   </style>
 </head>
 <body>
-  <h1>Trạm QR của Aurora</h1>
+  <h1>Trạm QR của Aurora – Tầng 2</h1>
 
   <div>
     <input id="content" placeholder="Nội dung mã QR">
@@ -75,11 +89,9 @@
     <select id="filter-month" onchange="renderQRs()">
       <option value="">-- Tất cả --</option>
     </select>
-
-    <label>Tìm kiếm:</label>
-    <input id="search" placeholder="Từ khóa" oninput="renderQRs()">
   </div>
 
+  <div class="summary" id="stats"></div>
   <div id="qr-groups"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
@@ -108,16 +120,12 @@
     function renderQRs() {
       const filterTag = document.getElementById('filter-tag').value;
       const filterMonth = document.getElementById('filter-month').value;
-      const keyword = document.getElementById('search').value.trim().toLowerCase();
 
       const filteredData = qrData.filter(qr => {
         const matchTag = !filterTag || qr.tag === filterTag;
         const matchMonth = !filterMonth || qr.time.slice(0, 7) === filterMonth;
-        const matchKeyword = !keyword || qr.content.toLowerCase().includes(keyword) || (qr.note || '').toLowerCase().includes(keyword);
-        return matchTag && matchMonth && matchKeyword;
+        return matchTag && matchMonth;
       });
-
-      filteredData.sort((a, b) => new Date(b.time) - new Date(a.time));
 
       const grouped = {};
       filteredData.forEach(qr => {
@@ -127,14 +135,18 @@
 
       const qrGroups = document.getElementById('qr-groups');
       qrGroups.innerHTML = '';
+
       for (let tag in grouped) {
         const groupDiv = document.createElement('div');
         groupDiv.className = 'group';
-        const title = document.createElement('h2');
-        title.textContent = `📂 ${tag}`;
-        groupDiv.appendChild(title);
 
-        grouped[tag].forEach((qr) => {
+        const toggle = document.createElement('div');
+        toggle.className = 'toggle-group';
+        toggle.textContent = `📂 ${tag} (${grouped[tag].length})`;
+        toggle.onclick = () => groupDiv.classList.toggle('collapsed');
+        groupDiv.appendChild(toggle);
+
+        grouped[tag].forEach(qr => {
           const item = document.createElement('div');
           item.className = 'qr-item';
 
@@ -148,13 +160,6 @@
             saveData();
           };
 
-          const tagInput = document.createElement('input');
-          tagInput.value = qr.tag;
-          tagInput.onchange = () => {
-            qr.tag = tagInput.value || 'Chưa phân loại';
-            saveData();
-          };
-
           const canvas = document.createElement('canvas');
           canvas.className = 'qr-img';
           QRCode.toCanvas(canvas, qr.content, { width: 120 });
@@ -162,10 +167,8 @@
           const delBtn = document.createElement('button');
           delBtn.textContent = '❌ Xoá';
           delBtn.onclick = () => {
-            if (confirm('Bạn có chắc chắn muốn xoá?')) {
-              qrData = qrData.filter(q => !(q.content === qr.content && q.time === qr.time));
-              saveData();
-            }
+            qrData = qrData.filter(q => !(q.content === qr.content && q.time === qr.time));
+            saveData();
           };
 
           const downloadBtn = document.createElement('button');
@@ -179,7 +182,6 @@
 
           item.appendChild(info);
           item.appendChild(noteInput);
-          item.appendChild(tagInput);
           item.appendChild(canvas);
           item.appendChild(downloadBtn);
           item.appendChild(delBtn);
@@ -190,6 +192,7 @@
       }
 
       updateFilters();
+      updateStats();
     }
 
     function updateFilters() {
@@ -226,6 +229,15 @@
       });
     }
 
+    function updateStats() {
+      const stats = document.getElementById('stats');
+      const total = qrData.length;
+      const byTag = {};
+      qrData.forEach(q => byTag[q.tag] = (byTag[q.tag] || 0) + 1);
+      stats.innerHTML = `<b>Tổng QR:</b> ${total} | ` +
+        Object.entries(byTag).map(([k,v]) => `${k}: ${v}`).join(' | ');
+    }
+
     function exportData() {
       const blob = new Blob([JSON.stringify(qrData)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -250,6 +262,10 @@
         }
       };
       reader.readAsText(file);
+    }
+
+    window.onbeforeunload = () => {
+      if (qrData.length) return 'Bạn có chắc chắn muốn rời đi?';
     }
 
     renderQRs();
