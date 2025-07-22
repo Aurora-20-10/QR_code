@@ -1,42 +1,54 @@
-<!DOCTYPE html>
-<html lang="vi">
+<!DOCTYPE html><html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <title>Trạm QR của Aurora</title>
+  <title>Trạm QR của Aurora.T-05</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
-      font-family: Arial;
-      padding: 20px;
       background: #121212;
       color: #f0f0f0;
+      font-family: 'Segoe UI', sans-serif;
+      padding: 20px;
     }
-    input, button {
+    h1 {
+      color: #80d0ff;
+      text-shadow: 0 0 5px #00f0ff;
+    }
+    input, button, select {
       padding: 10px;
-      font-size: 16px;
       margin: 5px;
+      border-radius: 5px;
+      border: none;
+      font-size: 16px;
+    }
+    #qr-list {
+      margin-top: 20px;
     }
     .qr-item {
-      margin-top: 20px;
-      padding: 15px;
       background: #1e1e1e;
-      border-radius: 8px;
-      border: 1px solid #333;
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 15px;
+      box-shadow: 0 0 10px #000;
     }
     canvas {
       display: block;
-      margin-top: 10px;
+      margin: 10px 0;
     }
   </style>
 </head>
 <body>
-  <h1>🧬 Aurora.T-05 – Trạm QR vĩnh viễn</h1>
-  <input id="qr-input" placeholder="Nhập nội dung để tạo QR" style="width: 350px;">
+  <h1>🧬 Aurora QR Station – Tầng 2</h1>
+  <input id="qr-input" placeholder="Nội dung QR" style="width: 250px">
+  <input id="qr-note" placeholder="Ghi chú (tuỳ chọn)" style="width: 200px">
+  <select id="qr-tag">
+    <option value="Chưa phân loại">Chưa phân loại</option>
+    <option value="Cá nhân">Cá nhân</option>
+    <option value="Công việc">Công việc</option>
+    <option value="Hệ thống">Hệ thống</option>
+  </select>
   <button onclick="createQR()">Tạo & Lưu</button>
-
-  <div id="qr-list"></div>
-
-  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
-  <script>
+  <button onclick="exportData()">📤 Xuất dữ liệu</button>  <div id="qr-list"></div>  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>  <script>
     let storedQRs = JSON.parse(localStorage.getItem('aurora_qr_list')) || [];
 
     function saveToStorage() {
@@ -44,14 +56,17 @@
     }
 
     function createQR() {
-      const value = document.getElementById("qr-input").value.trim();
-      if (!value) return;
+      const text = document.getElementById("qr-input").value.trim();
+      const note = document.getElementById("qr-note").value.trim();
+      const tag = document.getElementById("qr-tag").value;
+      if (!text) return;
 
-      storedQRs.unshift(value); // đẩy lên đầu
-      storedQRs = [...new Set(storedQRs)]; // lọc trùng
+      storedQRs.unshift({ text, note, tag, created: new Date().toISOString() });
       saveToStorage();
       renderQRs();
+
       document.getElementById("qr-input").value = "";
+      document.getElementById("qr-note").value = "";
     }
 
     function deleteQR(index) {
@@ -62,42 +77,50 @@
       }
     }
 
+    function exportData() {
+      const blob = new Blob([JSON.stringify(storedQRs, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'aurora_qr_data.json';
+      a.click();
+    }
+
     function renderQRs() {
       const list = document.getElementById("qr-list");
       list.innerHTML = "";
 
-      storedQRs.forEach((text, index) => {
+      storedQRs.forEach((qr, index) => {
         const div = document.createElement("div");
         div.className = "qr-item";
 
         const p = document.createElement("p");
-        p.innerText = `🔗 ${text}`;
+        p.innerHTML = `🔗 <strong>${qr.text}</strong><br>📝 ${qr.note || 'Không ghi chú'}<br>🏷️ ${qr.tag} – 📅 ${new Date(qr.created).toLocaleString()}`;
 
         const canvas = document.createElement("canvas");
-        QRCode.toCanvas(canvas, text, { width: 200 });
+        QRCode.toCanvas(canvas, qr.text, { width: 200 });
 
-        const downloadBtn = document.createElement("button");
-        downloadBtn.innerText = "📥 Tải ảnh QR";
-        downloadBtn.onclick = () => {
+        const dlBtn = document.createElement("button");
+        dlBtn.innerText = "📥 Tải ảnh QR";
+        dlBtn.onclick = () => {
           const link = document.createElement("a");
           link.download = `qr_${index}.png`;
           link.href = canvas.toDataURL("image/png");
           link.click();
         };
 
-        const deleteBtn = document.createElement("button");
-        deleteBtn.innerText = "🗑 Xóa";
-        deleteBtn.onclick = () => deleteQR(index);
+        const delBtn = document.createElement("button");
+        delBtn.innerText = "🗑 Xóa";
+        delBtn.onclick = () => deleteQR(index);
 
         div.appendChild(p);
         div.appendChild(canvas);
-        div.appendChild(downloadBtn);
-        div.appendChild(deleteBtn);
+        div.appendChild(dlBtn);
+        div.appendChild(delBtn);
         list.appendChild(div);
       });
     }
 
     renderQRs();
-  </script>
-</body>
+  </script></body>
 </html>
