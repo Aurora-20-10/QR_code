@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Aurora QR Generator</title>
+</head>
+<body>
+  <h2>Tạo mã QR tĩnh</h2>
+  <input id="text" type="text" placeholder="Nhập nội dung" style="width:300px">
+  <button onclick="generateQR()">Tạo QR</button>
+  <br><br>
+  <canvas id="qrcode"></canvas>
+
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+  <script>
+    function generateQR() {
+      const canvas = document.getElementById("qrcode");
+      const value = document.getElementById("text").value;
+      QRCode.toCanvas(canvas, value, { width: 256 }, function (error) {
+        if (error) console.error(error);
+      });
+    }
+  </script>
+</body>
+</html>
