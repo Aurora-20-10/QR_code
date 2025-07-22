@@ -52,33 +52,22 @@
       width: 100%;
       margin-top: 6px;
     }
-    .modal {
+    #modal {
       display: none;
       position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background-color: rgba(0,0,0,0.8);
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.8);
       justify-content: center;
       align-items: center;
-      z-index: 999;
     }
-    .modal-content {
-      background: #000;
-      padding: 20px;
-      border-radius: 8px;
-      position: relative;
-    }
-    .modal-content canvas {
-      width: 300px;
-      height: 300px;
-    }
-    .close-btn {
-      position: absolute;
-      top: 8px;
-      right: 12px;
-      color: #fff;
-      font-size: 20px;
-      cursor: pointer;
+    #modal canvas {
+      border: 8px solid white;
+      border-radius: 10px;
+      background-color: white;
     }
   </style>
 </head>
@@ -107,13 +96,7 @@
   </div>
 
   <div id="qr-groups"></div>
-
-  <div id="qr-modal" class="modal" onclick="this.style.display='none'">
-    <div class="modal-content" onclick="event.stopPropagation()">
-      <span class="close-btn" onclick="document.getElementById('qr-modal').style.display='none'">×</span>
-      <canvas id="qr-modal-canvas"></canvas>
-    </div>
-  </div>
+  <div id="modal" onclick="this.style.display='none'"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
   <script>
@@ -129,6 +112,13 @@
       const note = document.getElementById('note').value.trim();
       const tag = document.getElementById('tag').value.trim() || 'Chưa phân loại';
       if (!content) return alert('Nội dung không được để trống');
+
+      const existed = qrData.find(q => q.content === content);
+      if (existed) {
+        const t = new Date(existed.time).toLocaleString();
+        alert(`⚠️ Mã QR này đã tồn tại từ ${t}`);
+        return;
+      }
 
       qrData.push({ content, note, tag, time: new Date().toISOString() });
       saveData();
@@ -178,7 +168,7 @@
           };
 
           const tagInput = document.createElement('input');
-          tagInput.value = qr.tag;
+          tagInput.value = qr.tag || '';
           tagInput.onchange = () => {
             qr.tag = tagInput.value.trim() || 'Chưa phân loại';
             saveData();
@@ -188,9 +178,11 @@
           canvas.className = 'qr-img';
           QRCode.toCanvas(canvas, qr.content, { width: 120 });
           canvas.onclick = () => {
-            const modal = document.getElementById('qr-modal');
-            const modalCanvas = document.getElementById('qr-modal-canvas');
-            QRCode.toCanvas(modalCanvas, qr.content, { width: 300 });
+            const modal = document.getElementById('modal');
+            modal.innerHTML = '';
+            const bigCanvas = document.createElement('canvas');
+            QRCode.toCanvas(bigCanvas, qr.content, { width: 300 });
+            modal.appendChild(bigCanvas);
             modal.style.display = 'flex';
           };
 
