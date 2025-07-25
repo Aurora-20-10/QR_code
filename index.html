@@ -197,8 +197,11 @@
           const delBtn = document.createElement('button');
           delBtn.textContent = '❌';
           delBtn.onclick = () => {
-            qrData = qrData.filter(q => !(q.content === qr.content && q.time === qr.time));
-            saveData();
+             const msg = 'Bạn có chắc muốn xóa mã QR này?';
+            if (confirm(msg)) {
+              qrData = qrData.filter(q => !(q.content === qr.content && q.time === qr.time));
+              saveData();
+            }
           };
 
           const downloadBtn = document.createElement('button');
