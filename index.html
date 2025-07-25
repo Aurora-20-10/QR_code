@@ -278,21 +278,29 @@
     }
 
     function importData(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = e => {
-        try {
-          const imported = JSON.parse(e.target.result);
-          if (!Array.isArray(imported)) throw new Error();
-          qrData = imported;
-          saveData();
-        } catch {
-          alert('Tập tin không hợp lệ');
-        }
-      };
-      reader.readAsText(file);
-    }
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = e => {
+          const backup = qrData.slice();
+          try {
+            const imported = JSON.parse(e.target.result);
+            const valid = Array.isArray(imported) && imported.every(it =>
+              it && typeof it.content === 'string' &&
+              typeof it.note === 'string' &&
+              typeof it.tag === 'string' &&
+              typeof it.time === 'string');
+            if (!valid) throw new Error();
+            qrData = imported;
+            saveData();
+          } catch {
+            qrData = backup;
+            alert('Tập tin không hợp lệ');
+            renderQRs();
+          }
+        };
+        reader.readAsText(file);
+      }
 
     renderQRs();
   </script>
