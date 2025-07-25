@@ -91,7 +91,8 @@
     <input id="tag" placeholder="Phân loại (Công việc, Cá nhân, ...)">
     <button onclick="addQR()">Tạo mã</button>
     <button onclick="exportData()">Xuất toàn bộ</button>
-    <input type="file" onchange="importData(event)">
+    <button onclick="document.getElementById('fileInput').click()">Nhập từ tệp</button>
+    <input id="fileInput" type="file" onchange="importData(event)" style="display:none">
   </div>
   <div>
     <label>Lọc theo phân loại:</label>
