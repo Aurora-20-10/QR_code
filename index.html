@@ -291,8 +291,11 @@
               typeof it.tag === 'string' &&
               typeof it.time === 'string');
             if (!valid) throw new Error();
+            const msg = `Tập chứa ${imported.length} mã QR. Nhấn OK để nhập và ghi đè dữ liệu hiện có.`;
+          if (confirm(msg)) {
             qrData = imported;
             saveData();
+          }
           } catch {
             qrData = backup;
             alert('Tập tin không hợp lệ');
