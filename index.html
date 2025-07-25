@@ -93,6 +93,7 @@
     <button onclick="exportData()">Xuất toàn bộ</button>
     <button onclick="document.getElementById('fileInput').click()">Nhập từ tệp</button>
     <input id="fileInput" type="file" onchange="importData(event)" style="display:none">
+    <button onclick="undo()">Hoàn tác</button>
   </div>
   <div>
     <label>Lọc theo phân loại:</label>
@@ -117,7 +118,21 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
   <script>
     let qrData = JSON.parse(localStorage.getItem('aurora_qr_list') || '[]');
+const undoStack = [];
 
+    function recordHistory() {
+      undoStack.push(JSON.parse(JSON.stringify(qrData)));
+      if (undoStack.length > 50) undoStack.shift();
+    }
+
+    function undo() {
+      if (!undoStack.length) {
+        alert('Không có thay đổi để hoàn tác');
+        return;
+      }
+      qrData = undoStack.pop();
+      saveData();
+    }
     function saveData() {
       localStorage.setItem('aurora_qr_list', JSON.stringify(qrData));
       renderQRs();
@@ -129,6 +144,7 @@
       const tag = document.getElementById('tag').value.trim() || 'Chưa phân loại';
       if (!content) return alert('Nội dung không được để trống');
       if (qrData.some(q => q.content === content)) return alert('Nội dung này đã tồn tại');
+      recordHistory();
       qrData.push({ content, note, tag, time: new Date().toISOString() });
       saveData();
       document.getElementById('content').value = '';
@@ -176,6 +192,7 @@
           const noteInput = document.createElement('textarea');
           noteInput.value = qr.note || '';
           noteInput.onchange = () => {
+            recordHistory();
             qr.note = noteInput.value;
             saveData();
           };
@@ -183,8 +200,9 @@
           const tagInput = document.createElement('input');
           tagInput.value = qr.tag || '';
           tagInput.onchange = () => {
-           const msg = 'Bạn có chắc muốn xóa mã QR này?';
+            const msg = 'Bạn có chắc muốn xóa mã QR này?';
             if (confirm(msg)) {
+              recordHistory();
               qrData = qrData.filter(q => !(q.content === qr.content && q.time === qr.time));
               saveData();
             }
@@ -197,6 +215,7 @@
           const delBtn = document.createElement('button');
           delBtn.textContent = '❌';
           delBtn.onclick = () => {
+          recordHistory();
              const msg = 'Bạn có chắc muốn xóa mã QR này?';
             if (confirm(msg)) {
               qrData = qrData.filter(q => !(q.content === qr.content && q.time === qr.time));
@@ -299,6 +318,7 @@
             if (!valid) throw new Error();
             const msg = `Tập chứa ${imported.length} mã QR. Nhấn OK để nhập và ghi đè dữ liệu hiện có.`;
           if (confirm(msg)) {
+            recordHistory();
             qrData = imported;
             saveData();
           }
