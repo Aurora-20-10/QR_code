@@ -183,8 +183,11 @@
           const tagInput = document.createElement('input');
           tagInput.value = qr.tag || '';
           tagInput.onchange = () => {
-            qr.tag = tagInput.value || 'Chưa phân loại';
-            saveData();
+           const msg = 'Bạn có chắc muốn xóa mã QR này?';
+            if (confirm(msg)) {
+              qrData = qrData.filter(q => !(q.content === qr.content && q.time === qr.time));
+              saveData();
+            }
           };
 
           const info = document.createElement('div');
